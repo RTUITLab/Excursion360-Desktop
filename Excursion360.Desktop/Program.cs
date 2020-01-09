@@ -15,6 +15,8 @@ using System.Threading;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using Excursion360.Desktop.Services.Firefox;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
 
 namespace Excursion360.Desktop
 {
@@ -22,20 +24,23 @@ namespace Excursion360.Desktop
     {
         static async Task Main(string[] args)
         {
-            var host = WebHost
-                .CreateDefaultBuilder()
-                .UseWebRoot("")
-                .Configure(app => app.UseStaticFiles(new StaticFileOptions
-                {
-                    OnPrepareResponse = (context) =>
-                    {
-                        context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
-                        context.Context.Response.Headers.Add("Expires", "-1");
-                    }
-                }))
+            var host = Host
+                .CreateDefaultBuilder(args)
                 .ConfigureLogging(logs =>
                 {
                     logs.SetMinimumLevel(LogLevel.Information);
+                })
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseWebRoot("");
+                    webBuilder.Configure(app => app.UseStaticFiles(new StaticFileOptions
+                    {
+                        OnPrepareResponse = (context) =>
+                        {
+                            context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
+                            context.Context.Response.Headers.Add("Expires", "-1");
+                        }
+                    }));
                 })
                 .ConfigureServices(services =>
                 {
@@ -61,8 +66,10 @@ namespace Excursion360.Desktop
                 }
             }
             var hostTask = host.RunAsync().ConfigureAwait(false);
-
-            var uri = new Uri(host.ServerFeatures
+            Console.WriteLine();
+            var uri = new Uri(host.Services
+                .GetRequiredService<IServer>()
+                .Features
                 .Get<IServerAddressesFeature>()
                 .Addresses
                 .Single(a => a.StartsWith("http:", StringComparison.Ordinal)));
