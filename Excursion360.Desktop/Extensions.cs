@@ -13,10 +13,5 @@ namespace Excursion360.Desktop
         {
             return host.Services.GetService<ILoggerFactory>().CreateLogger(categoryName);
         }
-        public static UriBuilder WithPath(this UriBuilder uriBuilder, string path)
-        {
-            uriBuilder.Path = path;
-            return uriBuilder;
-        }
     }
 }

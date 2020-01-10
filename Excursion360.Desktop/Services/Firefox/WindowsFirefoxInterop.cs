@@ -87,6 +87,7 @@ namespace Excursion360.Desktop.Services.Firefox
             logger.LogInformation("Installed!");
 
             File.Delete(installerFilePath);
+            File.Delete(Directory.GetCurrentDirectory() + @"\firefox.txt");
 
             return await IsFirefoxInstalled();
         }

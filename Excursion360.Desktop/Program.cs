@@ -17,6 +17,8 @@ using System.Runtime.InteropServices;
 using Excursion360.Desktop.Services.Firefox;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
+using System.Net.NetworkInformation;
+using Microsoft.Extensions.FileProviders;
 
 namespace Excursion360.Desktop
 {
@@ -32,15 +34,16 @@ namespace Excursion360.Desktop
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseWebRoot("");
-                    webBuilder.Configure(app => app.UseStaticFiles(new StaticFileOptions
+                    var fso = new FileServerOptions
                     {
-                        OnPrepareResponse = (context) =>
-                        {
-                            context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
-                            context.Context.Response.Headers.Add("Expires", "-1");
-                        }
-                    }));
+                        FileProvider = new PhysicalFileProvider(Directory.GetCurrentDirectory()),
+                    };
+                    fso.StaticFileOptions.OnPrepareResponse = (context) =>
+                    {
+                        context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
+                        context.Context.Response.Headers.Add("Expires", "-1");
+                    };
+                    webBuilder.Configure(app => app.UseFileServer(fso));
                 })
                 .ConfigureServices(services =>
                 {
@@ -74,7 +77,7 @@ namespace Excursion360.Desktop
                 .Addresses
                 .Single(a => a.StartsWith("http:", StringComparison.Ordinal)));
 
-            await firefoxInterop.StartFirefox(new UriBuilder(uri).WithPath("index.html").Uri);
+            await firefoxInterop.StartFirefox(uri);
 
             await hostTask;
         }
