@@ -1,0 +1,17 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: BuildViewer
+        displayName: Build viewer
+        steps:
+          - script: dotnet tool restore
+          - script: dotnet nuke Publish
+          - publish: output
+            artifact: excursion360-desktop
