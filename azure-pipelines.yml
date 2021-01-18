@@ -9,19 +9,27 @@ trigger:
 stages:
 - stage: Build
   displayName: Build
-  pool:
-    vmImage: 'windows-latest'
   jobs:
     - job: BuildViewer
       displayName: Build viewer
+      pool:
+        vmImage: 'windows-latest'
       steps:
         - script: dotnet tool restore
           displayName: restore nuke tool
         - script: dotnet nuke Publish -Runtime win-x86
           displayName: publish application win-x64
         - publish: output
-          artifact: excursion360-desktop-win-x64
+          artifact: excursion360-desktop-build-win-x64
           displayName: publish executable artifact
+    - job: PublishReleaseNotes
+      displayName: Publish release notes
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+      - publish: ReleaseNotes.md
+        artifact: excursion360-desktop-release-notes
+        displayName: publish release notes
 
 - stage: Deploy
   displayName: Deploy
@@ -41,8 +49,8 @@ stages:
             action: 'create'
             target: '$(Build.SourceVersion)'
             tagSource: 'gitTag'
-            releaseNotesFilePath: 'ReleaseNotes.md'
-            assets: '$(Pipeline.Workspace)/excursion360-desktop-win-x64/*'
+            releaseNotesFilePath: '$(Pipeline.Workspace)/excursion360-desktop-release-notes/ReleaseNotes.md'
+            assets: '$(Pipeline.Workspace)/excursion360-desktop-build-win-x64/*'
             isDraft: true
             changeLogCompareToRelease: 'lastFullRelease'
             changeLogType: 'commitBased'
