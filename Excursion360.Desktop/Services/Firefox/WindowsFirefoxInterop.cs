@@ -102,7 +102,7 @@ namespace Excursion360.Desktop.Services.Firefox
             return new ValueTask<bool>(path != null);
         }
 
-        public ValueTask StartFirefox(Uri uri)
+        public ValueTask StartBrowser(Uri uri)
         {
             uri = uri ?? throw new ArgumentNullException(nameof(uri));
             logger.LogInformation($"Starting firefox on {uri.AbsoluteUri}");

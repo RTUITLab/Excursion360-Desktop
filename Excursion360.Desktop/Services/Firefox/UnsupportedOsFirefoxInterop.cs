@@ -12,7 +12,7 @@ namespace Excursion360.Desktop.Services.Firefox
             throw new NotSupportedException();
         }
 
-        public ValueTask StartFirefox(Uri uri)
+        public ValueTask StartBrowser(Uri uri)
         {
             throw new NotSupportedException();
         }
