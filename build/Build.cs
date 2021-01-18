@@ -79,13 +79,6 @@ class Build : NukeBuild
                 .SetProperty("DebugSymbols", false)
                 .EnableNoRestore());
 
-            var exeFiles = System.IO.Directory.GetFiles(OutputDirectory);
-
-            foreach (var file in exeFiles)
-            {
-                Normal(file);
-            }
-
             var executableFile = System.IO.Directory.GetFiles(OutputDirectory)
                 .Select(System.IO.Path.GetFileName)
                 .Where(f => f.StartsWith(projectName))
