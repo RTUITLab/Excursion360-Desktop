@@ -21,6 +21,7 @@ using System.Net.NetworkInformation;
 using Microsoft.Extensions.FileProviders;
 using Excursion360.Desktop.Services;
 using System.Reflection;
+using Excursion360.Desktop.Exceptions;
 
 namespace Excursion360.Desktop
 {
@@ -28,65 +29,96 @@ namespace Excursion360.Desktop
     {
         static async Task Main(string[] args)
         {
-            IHost host = CreateHost(args);
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = ConsoleColor.White;
+            try
+            {
+                var targetDirectory = GetExcursionDirectory();
+                using IHost host = CreateHost(args, targetDirectory);
+                IBrowser browser = await SelectBrowser(args, targetDirectory, host).ConfigureAwait(false);
+                var hostTask = host.RunAsync().ConfigureAwait(false);
+                await browser.StartBrowser(host.GetListeningUri());
+                await hostTask;
+            }
+            catch (IncorrectEnvironmentException ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected error, please tell us about that https://github.com/RTUITLab/Excursion360-Desktop/issues");
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+            }
+            Console.WriteLine("Press any key to exit");
+            Console.ReadKey();
+        }
 
-            bool useFirefox = IsNeedFireFox(args);
+        private static async Task<IBrowser> SelectBrowser(string[] args, string targetDirectory, IHost host)
+        {
+            bool useFirefox = IsNeedFireFox(args, targetDirectory);
             IBrowser browser;
             if (useFirefox)
             {
-                var firefoxInterop = host.Services.GetRequiredService<IFirefoxInterop>();
-                browser = firefoxInterop;
-                if (!await firefoxInterop.IsFirefoxInstalled())
-                {
-                    if (!await firefoxInterop.TryInstallFirefoxAsync().ConfigureAwait(false))
-                    {
-                        return;
-                    }
-                }
+                browser = await SetupFirefox(host).ConfigureAwait(false);
             }
             else
             {
                 browser = new DefaultBrowser();
             }
-            var hostTask = host.RunAsync().ConfigureAwait(false);
-            Console.WriteLine();
-            var uri = new Uri(host.Services
-                .GetRequiredService<IServer>()
-                .Features
-                .Get<IServerAddressesFeature>()
-                .Addresses
-                .Single(a => a.StartsWith("http:", StringComparison.Ordinal)));
 
-            await browser.StartBrowser(uri);
-
-            await hostTask;
+            return browser;
         }
 
-        private static bool IsNeedFireFox(string[] args)
+        private static string GetExcursionDirectory()
+        {
+            var dirs = Directory.GetDirectories(Directory.GetCurrentDirectory()).Select(d => Path.GetFileName(d)).ToArray();
+            if (dirs.Length == 0)
+            {
+                throw new IncorrectEnvironmentException("You must place excursion files to the subdirectory with executable file");
+            }
+            if (dirs.Length == 1)
+            {
+                return dirs[0];
+            }
+            return dirs[ConsoleHelper.SelectOneFromArray("Select directory with excursion", dirs)];
+        }
+
+        private static async Task<IBrowser> SetupFirefox(IHost host)
+        {
+            var firefoxInterop = host.Services.GetRequiredService<IFirefoxInterop>();
+            if (!await firefoxInterop.IsFirefoxInstalled())
+            {
+                if (!await firefoxInterop.TryInstallFirefoxAsync().ConfigureAwait(false))
+                {
+                    throw new IncorrectEnvironmentException("Can't install firefox");
+                }
+            }
+            return firefoxInterop;
+        }
+
+        private static bool IsNeedFireFox(string[] args, string targetDirectory)
         {
             if (args.Contains("--firefox"))
             {
                 return true;
             }
-            while (true)
-            {
-                Console.WriteLine("Select run option");
-                Console.WriteLine("1: Use firefox (install if not present)");
-                Console.WriteLine("2: Use default browser");
-                var key = Console.ReadKey();
-                switch (key.KeyChar)
+            var browserMode = ConsoleHelper.SelectOneFromArray($"Select run option. Selected excursion: {targetDirectory}",
+                new string[]
                 {
-                    case '1':
-                        return true;
-                    case '2':
-                        return false;
-                    default:
-                        break;
-                }
-            }
+                    "Use firefox (install if not present)",
+                    "Use default browser"
+                });
+            Console.Clear();
+            return browserMode switch
+            {
+                0 => true,
+                1 => false,
+                _ => false
+            };
         }
 
-        private static IHost CreateHost(string[] args)
+        private static IHost CreateHost(string[] args, string targetDirectory)
         {
             var host = Host
                 .CreateDefaultBuilder(args)
@@ -99,7 +131,7 @@ namespace Excursion360.Desktop
                     var fso = new FileServerOptions
                     {
                         FileProvider = new CompositeFileProvider(
-                            new PhysicalFileProvider(Directory.GetCurrentDirectory()),
+                            new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), targetDirectory)),
                             new EmbeddedFileProvider(Assembly.GetExecutingAssembly()))
                     };
                     fso.DefaultFilesOptions.DefaultFileNames.Add("Resources/NotFound.html");
@@ -108,7 +140,8 @@ namespace Excursion360.Desktop
                         context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
                         context.Context.Response.Headers.Add("Expires", "-1");
                     };
-                    webBuilder.Configure(app => {
+                    webBuilder.Configure(app =>
+                    {
                         app.UseFileServer(fso);
                     });
                 })
