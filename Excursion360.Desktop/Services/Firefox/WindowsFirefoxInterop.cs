@@ -23,6 +23,7 @@ namespace Excursion360.Desktop.Services.Firefox
             IHttpClientFactory httpClientFactory)
         {
             this.logger = logger;
+            httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             httpClient = httpClientFactory.CreateClient(nameof(IFirefoxInterop));
         }
         public async Task<bool> TryInstallFirefoxAsync()
