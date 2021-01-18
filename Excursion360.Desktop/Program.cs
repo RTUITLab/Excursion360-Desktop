@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using System.Net.NetworkInformation;
 using Microsoft.Extensions.FileProviders;
 using Excursion360.Desktop.Services;
+using System.Reflection;
 
 namespace Excursion360.Desktop
 {
@@ -97,14 +98,19 @@ namespace Excursion360.Desktop
                 {
                     var fso = new FileServerOptions
                     {
-                        FileProvider = new PhysicalFileProvider(Directory.GetCurrentDirectory()),
+                        FileProvider = new CompositeFileProvider(
+                            new PhysicalFileProvider(Directory.GetCurrentDirectory()),
+                            new EmbeddedFileProvider(Assembly.GetExecutingAssembly()))
                     };
+                    fso.DefaultFilesOptions.DefaultFileNames.Add("Resources/NotFound.html");
                     fso.StaticFileOptions.OnPrepareResponse = (context) =>
                     {
                         context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
                         context.Context.Response.Headers.Add("Expires", "-1");
                     };
-                    webBuilder.Configure(app => app.UseFileServer(fso));
+                    webBuilder.Configure(app => {
+                        app.UseFileServer(fso);
+                    });
                 })
                 .ConfigureServices(services =>
                 {
