@@ -13,6 +13,7 @@ using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
+using static Nuke.Common.Logger;
 
 [CheckBuildProjectConfigurations]
 [ShutdownDotNetAfterServerBuild]
@@ -24,7 +25,7 @@ class Build : NukeBuild
     ///   - Microsoft VisualStudio     https://nuke.build/visualstudio
     ///   - Microsoft VSCode           https://nuke.build/vscode
 
-    public static int Main () => Execute<Build>(x => x.Compile);
+    public static int Main () => Execute<Build>(x => x.Publish);
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
@@ -65,8 +66,9 @@ class Build : NukeBuild
         .DependsOn(Compile, Clean)
         .Executes(() =>
         {
+            var projectName = "Excursion360.Desktop";
             DotNetPublish(s => s
-                .SetProject(Solution.GetProject("Excursion360.Desktop"))
+                .SetProject(Solution.GetProject(projectName))
                 .SetConfiguration(Configuration)
                 .SetOutput(OutputDirectory)
                 .SetRuntime(Runtime)
@@ -76,6 +78,14 @@ class Build : NukeBuild
                 .SetProperty("DebugType", "None")
                 .SetProperty("DebugSymbols", false)
                 .EnableNoRestore());
+
+            var executableFile = System.IO.Directory.GetFiles(OutputDirectory)
+                .Select(System.IO.Path.GetFileName)
+                .Where(f => f.StartsWith(projectName))
+                .Single();
+            RenameFile(OutputDirectory / executableFile,
+                $"{OutputDirectory / projectName}.{Runtime}{executableFile.Substring(projectName.Length)}");
+
         });
 
 }
