@@ -26,10 +26,10 @@ stages:
       steps:
         - script: dotnet tool restore
           displayName: restore nuke tool
-        - script: dotnet nuke Publish -Runtime $(imageName)
-          displayName: publish application $(imageName)
+        - script: dotnet nuke Publish -Runtime $(runtime)
+          displayName: publish application $(runtime)
         - publish: output
-          artifact: excursion360-desktop-build-$(imageName)
+          artifact: excursion360-desktop-build-$(runtime)
           displayName: publish executable artifact
     - job: PublishReleaseNotes
       displayName: Publish release notes
