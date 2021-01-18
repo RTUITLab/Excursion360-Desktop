@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - master
+    - develop
   tags:
     include:
     - v*
@@ -12,15 +13,23 @@ stages:
   jobs:
     - job: BuildViewer
       displayName: Build viewer
+      strategy:
+        matrix:
+          win-x64:
+            imageName: windows-latest
+            runtime: win-x64
+          win-x86:
+            imageName: windows-latest
+            runtime: win-x86
       pool:
-        vmImage: 'windows-latest'
+        vmImage: $(imageName)
       steps:
         - script: dotnet tool restore
           displayName: restore nuke tool
-        - script: dotnet nuke Publish -Runtime win-x86
-          displayName: publish application win-x64
+        - script: dotnet nuke Publish -Runtime $(imageName)
+          displayName: publish application $(imageName)
         - publish: output
-          artifact: excursion360-desktop-build-win-x64
+          artifact: excursion360-desktop-build-$(imageName)
           displayName: publish executable artifact
     - job: PublishReleaseNotes
       displayName: Publish release notes
@@ -31,26 +40,26 @@ stages:
         artifact: excursion360-desktop-release-notes
         displayName: publish release notes
 
-- stage: Deploy
-  displayName: Deploy
-  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
-  pool:
-    vmImage: 'ubuntu-latest'
-  jobs:
-    - job: DeployViewer
-      displayName: Deploy viewer
-      steps:
-        - checkout: none
-        - download: current
-        - task: GitHubRelease@1
-          inputs:
-            gitHubConnection: 'CAPCHIK'
-            repositoryName: '$(Build.Repository.Name)'
-            action: 'create'
-            target: '$(Build.SourceVersion)'
-            tagSource: 'gitTag'
-            releaseNotesFilePath: '$(Pipeline.Workspace)/excursion360-desktop-release-notes/ReleaseNotes.md'
-            assets: '$(Pipeline.Workspace)/excursion360-desktop-build-win-x64/*'
-            isDraft: true
-            changeLogCompareToRelease: 'lastFullRelease'
-            changeLogType: 'commitBased'
+# - stage: Deploy
+#   displayName: Deploy
+#   condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+#   pool:
+#     vmImage: 'ubuntu-latest'
+#   jobs:
+#     - job: DeployViewer
+#       displayName: Deploy viewer
+#       steps:
+#         - checkout: none
+#         - download: current
+#         - task: GitHubRelease@1
+#           inputs:
+#             gitHubConnection: 'CAPCHIK'
+#             repositoryName: '$(Build.Repository.Name)'
+#             action: 'create'
+#             target: '$(Build.SourceVersion)'
+#             tagSource: 'gitTag'
+#             releaseNotesFilePath: '$(Pipeline.Workspace)/excursion360-desktop-release-notes/ReleaseNotes.md'
+#             assets: '$(Pipeline.Workspace)/excursion360-desktop-build-win-x64/*'
+#             isDraft: true
+#             changeLogCompareToRelease: 'lastFullRelease'
+#             changeLogType: 'commitBased'
