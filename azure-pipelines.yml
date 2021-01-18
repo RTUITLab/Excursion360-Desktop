@@ -1,5 +1,5 @@
 trigger:
-- main
+- master
 
 pool:
   vmImage: 'windows-latest'
@@ -12,6 +12,9 @@ stages:
         displayName: Build viewer
         steps:
           - script: dotnet tool restore
-          - script: dotnet nuke Publish
+            displayName: restore nuke tool
+          - script: dotnet nuke Publish -Runtime win-x86
+            displayName: publish application win-x64
           - publish: output
-            artifact: excursion360-desktop
+            artifact: excursion360-desktop-win-x64
+            displayName: publish executable artifact
