@@ -32,6 +32,7 @@ stages:
     - job: DeployViewer
       displayName: Deploy viewer
       steps:
+        - checkout: none
         - download: current
         - task: GitHubRelease@1
           inputs:

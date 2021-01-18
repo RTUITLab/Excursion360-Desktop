@@ -1,7 +1,7 @@
 # Desktop viewer for 360 excursions
 
 ## CLI Options
-Run exe file with `--firefox` to force using firefox instead selecting on start.
+Run executable file with `--firefox` to force using firefox instead selecting on start.
 
 ## Build
 
