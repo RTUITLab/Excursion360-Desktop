@@ -60,6 +60,6 @@ stages:
             tagSource: 'gitTag'
             releaseNotesFilePath: '$(Pipeline.Workspace)/excursion360-desktop-release-notes/ReleaseNotes.md'
             assets: '$(Pipeline.Workspace)/excursion360-desktop-build*/*'
-            isDraft: true
+            isDraft: false
             changeLogCompareToRelease: 'lastFullRelease'
             changeLogType: 'commitBased'
