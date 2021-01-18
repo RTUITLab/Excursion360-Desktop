@@ -41,7 +41,7 @@ stages:
             target: '$(Build.SourceVersion)'
             tagSource: 'gitTag'
             releaseNotesFilePath: 'ReleaseNotes.md'
-            assets: '$(Pipeline.Workspace)/excursion360-desktop-win-x64'
+            assets: '$(Pipeline.Workspace)/excursion360-desktop-win-x64/*'
             isDraft: true
             changeLogCompareToRelease: 'lastFullRelease'
             changeLogType: 'commitBased'
