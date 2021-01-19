@@ -22,6 +22,8 @@ using Microsoft.Extensions.FileProviders;
 using Excursion360.Desktop.Services;
 using System.Reflection;
 using Excursion360.Desktop.Exceptions;
+using MintPlayer.PlatformBrowser;
+using System.Collections.Generic;
 
 namespace Excursion360.Desktop
 {
@@ -31,6 +33,8 @@ namespace Excursion360.Desktop
         {
             Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.White;
+
+
             try
             {
                 var targetDirectory = GetExcursionDirectory();
@@ -56,18 +60,11 @@ namespace Excursion360.Desktop
 
         private static async Task<IBrowser> SelectBrowser(string[] args, string targetDirectory, IHost host)
         {
-            bool useFirefox = IsNeedFireFox(args, targetDirectory);
-            IBrowser browser;
-            if (useFirefox)
-            {
-                browser = await SetupFirefox(host).ConfigureAwait(false);
-            }
-            else
-            {
-                browser = new DefaultBrowser();
-            }
-
-            return browser;
+            bool useFirefox = SelectFirefoxOrInstalled(args, targetDirectory, out var selectedBrowser);
+            return useFirefox ?
+                await SetupFirefox(host).ConfigureAwait(false)
+                :
+                new GenericBrowser(selectedBrowser);
         }
 
         private static string GetExcursionDirectory()
@@ -97,25 +94,39 @@ namespace Excursion360.Desktop
             return firefoxInterop;
         }
 
-        private static bool IsNeedFireFox(string[] args, string targetDirectory)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="targetDirectory"></param>
+        /// <returns>true if need firefox, false if selected another browser</returns>
+        private static bool SelectFirefoxOrInstalled(string[] args, string targetDirectory, out Browser browser)
         {
+            browser = null;
             if (args.Contains("--firefox"))
             {
                 return true;
             }
-            var browserMode = ConsoleHelper.SelectOneFromArray($"Select run option. Selected excursion: {targetDirectory}",
-                new string[]
-                {
-                    "Use firefox (install if not present)",
-                    "Use default browser"
-                });
+            var browsers = PlatformBrowser
+                .GetInstalledBrowsers()
+                .Where(b => !b.Name.Contains("Explorer"))
+                .Where(b => !b.Name.Contains("Firefox"))
+                .DistinctBy(b => b.Name)
+                .ToArray();
+            var browsersList = new List<string> { "Use Firefox (install if not present)" };
+            browsersList.AddRange(browsers.Select(b => b.Name));
+
+            var browserMode = ConsoleHelper.SelectOneFromArray($"Select run option. Selected excursion: {targetDirectory}", browsersList.ToArray());
             Console.Clear();
-            return browserMode switch
+            if (browserMode == 0) // Use furefox
             {
-                0 => true,
-                1 => false,
-                _ => false
-            };
+                return true;
+            }
+            else
+            {
+                browser = browsers[browserMode - 1];
+                return false;
+            }
         }
 
         private static IHost CreateHost(string[] args, string targetDirectory)
