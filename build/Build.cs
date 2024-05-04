@@ -15,7 +15,6 @@ using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using static Nuke.Common.Logger;
 
-[CheckBuildProjectConfigurations]
 [ShutdownDotNetAfterServerBuild]
 class Build : NukeBuild
 {
@@ -41,7 +40,7 @@ class Build : NukeBuild
         .Before(Restore)
         .Executes(() =>
         {
-            EnsureCleanDirectory(OutputDirectory);
+            OutputDirectory.CreateOrCleanDirectory();
         });
 
     Target Restore => _ => _

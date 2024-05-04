@@ -60,11 +60,12 @@ namespace Excursion360.Desktop
 
         private static async Task<IBrowser> SelectBrowser(string[] args, string targetDirectory, IHost host)
         {
-            bool useFirefox = SelectFirefoxOrInstalled(args, targetDirectory, out var selectedBrowser);
-            return useFirefox ?
-                await SetupFirefox(host).ConfigureAwait(false)
-                :
-                new GenericBrowser(selectedBrowser);
+            if (args.Contains("--firefox"))
+            {
+                return await SetupFirefox(host).ConfigureAwait(false);
+            }
+            var selectedBrowser = await SelectInstalledBrowserAsync(targetDirectory);
+            return new GenericBrowser(selectedBrowser);
         }
 
         private static string GetExcursionDirectory()
@@ -94,39 +95,21 @@ namespace Excursion360.Desktop
             return firefoxInterop;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="args"></param>
-        /// <param name="targetDirectory"></param>
-        /// <returns>true if need firefox, false if selected another browser</returns>
-        private static bool SelectFirefoxOrInstalled(string[] args, string targetDirectory, out Browser browser)
+
+        private static async Task<Browser> SelectInstalledBrowserAsync(string targetDirectory)
         {
-            browser = null;
-            if (args.Contains("--firefox"))
-            {
-                return true;
-            }
-            var browsers = PlatformBrowser
-                .GetInstalledBrowsers()
+            var browsers = (await PlatformBrowser
+                .GetInstalledBrowsers())
                 .Where(b => !b.Name.Contains("Explorer"))
-                .Where(b => !b.Name.Contains("Firefox"))
                 .DistinctBy(b => b.Name)
                 .ToArray();
+            
             var browsersList = new List<string> { "Use Firefox (install if not present)" };
             browsersList.AddRange(browsers.Select(b => b.Name));
 
-            var browserMode = ConsoleHelper.SelectOneFromArray($"Select run option. Selected excursion: {targetDirectory}", browsersList.ToArray());
+            var browserMode = ConsoleHelper.SelectOneFromArray($"Select run option. Selected excursion: {targetDirectory}", [.. browsersList]);
             Console.Clear();
-            if (browserMode == 0) // Use furefox
-            {
-                return true;
-            }
-            else
-            {
-                browser = browsers[browserMode - 1];
-                return false;
-            }
+            return browsers[browserMode - 1];
         }
 
         private static IHost CreateHost(string[] args, string targetDirectory)
@@ -148,8 +131,8 @@ namespace Excursion360.Desktop
                     fso.DefaultFilesOptions.DefaultFileNames.Add("Resources/NotFound.html");
                     fso.StaticFileOptions.OnPrepareResponse = (context) =>
                     {
-                        context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
-                        context.Context.Response.Headers.Add("Expires", "-1");
+                        context.Context.Response.Headers["Cache-Control"] = "no-cache, no-store";
+                        context.Context.Response.Headers["Expires"] = "-1";
                     };
                     webBuilder.Configure(app =>
                     {
