@@ -76,6 +76,7 @@ class Build : NukeBuild
                 .EnablePublishTrimmed()
                 .SetProperty("DebugType", "None")
                 .SetProperty("DebugSymbols", false)
+                .SetProperty("PublishIISAssets", false)
                 .EnableNoRestore());
 
             var executableFile = System.IO.Directory.GetFiles(OutputDirectory)
