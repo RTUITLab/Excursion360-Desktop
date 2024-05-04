@@ -1,31 +1,14 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-using System;
+﻿using Microsoft.Win32;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Excursion360.Desktop.Services.Firefox
 {
-    public class WindowsFirefoxInterop : IFirefoxInterop
+    public class WindowsFirefoxInterop(HttpClient httpClient, ILogger<WindowsFirefoxInterop> logger) : IFirefoxInterop
     {
         private const string FirefosinstallerUri = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/71.0/win64/ru/Firefox%20Setup%2071.0.msi";
         private const string RegistryFirefoxKey = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe";
-        private readonly ILogger<WindowsFirefoxInterop> logger;
-        private readonly HttpClient httpClient;
 
-        public WindowsFirefoxInterop(
-            ILogger<WindowsFirefoxInterop> logger,
-            IHttpClientFactory httpClientFactory)
-        {
-            this.logger = logger;
-            httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-            httpClient = httpClientFactory.CreateClient(nameof(IFirefoxInterop));
-        }
         public async Task<bool> TryInstallFirefoxAsync()
         {
             logger.LogInformation("Installing firefox...");
