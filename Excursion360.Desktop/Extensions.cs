@@ -17,4 +17,7 @@ static class Extensions
             .Addresses
             .Single(a => a.StartsWith("http:", StringComparison.Ordinal)));
     }
+
+    public static string ExcursionDirectoryPath(this IConfiguration configuration)
+        => configuration.GetValue<string?>("excursionsPath", null) ?? Directory.GetCurrentDirectory();
 }

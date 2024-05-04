@@ -11,6 +11,7 @@ Console.BackgroundColor = ConsoleColor.Black;
 Console.ForegroundColor = ConsoleColor.White;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -23,12 +24,13 @@ else
 }
 
 var app = builder.Build();
-var targetDirectory = GetExcursionDirectory();
+app.UseMiddleware<ImageMetricsMiddleware>();
+var targetDirectory = GetExcursionDirectory(builder.Configuration.ExcursionDirectoryPath());
 
 var fso = new FileServerOptions
 {
     FileProvider = new CompositeFileProvider(
-            new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), targetDirectory)),
+            new PhysicalFileProvider(Path.Combine(builder.Configuration.ExcursionDirectoryPath(), targetDirectory)),
             new EmbeddedFileProvider(Assembly.GetExecutingAssembly()))
 };
 fso.DefaultFilesOptions.DefaultFileNames.Add("Resources/NotFound.html");
@@ -40,16 +42,16 @@ fso.StaticFileOptions.OnPrepareResponse = (context) =>
 app.UseFileServer(fso);
 
 
-IBrowser browser = await SelectBrowser(args, targetDirectory, app.Services).ConfigureAwait(false);
+IBrowser browser = await SelectBrowser(targetDirectory, app.Services, app.Configuration).ConfigureAwait(false);
 
 var hostTask = app.RunAsync();
 await browser.StartBrowser(app.GetListeningUri());
 await hostTask;
 
 
-async Task<IBrowser> SelectBrowser(string[] args, string targetDirectory, IServiceProvider serviceProvider)
+async Task<IBrowser> SelectBrowser(string targetDirectory, IServiceProvider serviceProvider, IConfiguration configuration)
 {
-    if (args.Contains("--firefox"))
+    if (configuration.GetValue<bool>("--firefox"))
     {
         return await SetupFirefox(serviceProvider).ConfigureAwait(false);
     }
@@ -57,9 +59,9 @@ async Task<IBrowser> SelectBrowser(string[] args, string targetDirectory, IServi
     return new GenericBrowser(selectedBrowser);
 }
 
-string GetExcursionDirectory()
+string GetExcursionDirectory(string rootDir)
 {
-    var dirs = Directory.GetDirectories(Directory.GetCurrentDirectory()).Select(d => Path.GetFileName(d)).ToArray();
+    var dirs = Directory.GetDirectories(rootDir).Select(d => Path.GetFileName(d)).ToArray();
     if (dirs.Length == 0)
     {
         throw new IncorrectEnvironmentException("You must place excursion files to the subdirectory with executable file");
