@@ -11,8 +11,8 @@ Console.BackgroundColor = ConsoleColor.Black;
 Console.ForegroundColor = ConsoleColor.White;
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Logging.SetMinimumLevel(LogLevel.Information);
+builder.Services.AddSingleton<IStateImagesMetricsStore, InMemoryIStateImagesMetricsStore>();
 
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 {
@@ -24,8 +24,14 @@ else
 }
 
 var app = builder.Build();
-app.UseMiddleware<ImageMetricsMiddleware>();
 var targetDirectory = GetExcursionDirectory(builder.Configuration.ExcursionDirectoryPath());
+
+app.MapGet("/eapi/preload.json", (IStateImagesMetricsStore stateImagesMetrics) => {
+    return new
+    {
+        images = stateImagesMetrics.MostPopularUrls(),
+    };
+});
 
 var fso = new FileServerOptions
 {
@@ -36,8 +42,11 @@ var fso = new FileServerOptions
 fso.DefaultFilesOptions.DefaultFileNames.Add("Resources/NotFound.html");
 fso.StaticFileOptions.OnPrepareResponse = (context) =>
 {
-    context.Context.Response.Headers.CacheControl = "no-cache, no-store";
-    context.Context.Response.Headers.Expires = "-1";
+    if (context.File.Name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && context.File.PhysicalPath is not null)
+    {
+        var stateImagesMetricsStore = context.Context.RequestServices.GetRequiredService<IStateImagesMetricsStore>();
+        stateImagesMetricsStore.IncrementImageHit(context.Context.Request.Path);
+    }
 };
 app.UseFileServer(fso);
 
