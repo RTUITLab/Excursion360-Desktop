@@ -13,7 +13,7 @@ Console.ForegroundColor = ConsoleColor.White;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Services.AddSingleton<IStateImagesMetricsStore, InMemoryIStateImagesMetricsStore>();
-
+builder.Services.AddResponseCompression();
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 {
     builder.Services.AddHttpClient<IFirefoxInterop, WindowsFirefoxInterop>();
@@ -48,6 +48,7 @@ fso.StaticFileOptions.OnPrepareResponse = (context) =>
         stateImagesMetricsStore.IncrementImageHit(context.Context.Request.Path);
     }
 };
+app.UseResponseCompression();
 app.UseFileServer(fso);
 
 
