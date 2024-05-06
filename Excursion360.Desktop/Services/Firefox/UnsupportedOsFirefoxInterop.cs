@@ -1,24 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-namespace Excursion360.Desktop.Services.Firefox
+﻿namespace Excursion360.Desktop.Services.Firefox;
+
+public class UnsupportedOsFirefoxInterop : IFirefoxInterop
 {
-    public class UnsupportedOsFirefoxInterop : IFirefoxInterop
+    public ValueTask<bool> IsFirefoxInstalled()
     {
-        public ValueTask<bool> IsFirefoxInstalled()
-        {
-            throw new NotSupportedException();
-        }
+        throw new NotSupportedException();
+    }
 
-        public ValueTask StartBrowser(Uri uri)
-        {
-            throw new NotSupportedException();
-        }
+    public ValueTask StartBrowser(Uri uri)
+    {
+        throw new NotSupportedException();
+    }
 
-        public Task<bool> TryInstallFirefoxAsync()
-        {
-            throw new NotSupportedException();
-        }
+    public Task<bool> TryInstallFirefoxAsync()
+    {
+        throw new NotSupportedException();
     }
 }

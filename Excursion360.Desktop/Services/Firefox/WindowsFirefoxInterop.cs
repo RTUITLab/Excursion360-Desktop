@@ -1,31 +1,14 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-using System;
+﻿using Microsoft.Win32;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Excursion360.Desktop.Services.Firefox
 {
-    public class WindowsFirefoxInterop : IFirefoxInterop
+    public class WindowsFirefoxInterop(HttpClient httpClient, ILogger<WindowsFirefoxInterop> logger) : IFirefoxInterop
     {
         private const string FirefosinstallerUri = "https://download-installer.cdn.mozilla.net/pub/firefox/releases/71.0/win64/ru/Firefox%20Setup%2071.0.msi";
         private const string RegistryFirefoxKey = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe";
-        private readonly ILogger<WindowsFirefoxInterop> logger;
-        private readonly HttpClient httpClient;
 
-        public WindowsFirefoxInterop(
-            ILogger<WindowsFirefoxInterop> logger,
-            IHttpClientFactory httpClientFactory)
-        {
-            this.logger = logger;
-            httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-            httpClient = httpClientFactory.CreateClient(nameof(IFirefoxInterop));
-        }
         public async Task<bool> TryInstallFirefoxAsync()
         {
             logger.LogInformation("Installing firefox...");
@@ -33,11 +16,11 @@ namespace Excursion360.Desktop.Services.Firefox
             string installerFilePath = Path.Combine(Directory.GetCurrentDirectory() + @"\firefox.msi");
 
             Uri downloadUri = new Uri(FirefosinstallerUri);
-            using (HttpResponseMessage response = httpClient.GetAsync(downloadUri, HttpCompletionOption.ResponseHeadersRead).Result)
+            using (var response = await httpClient.GetAsync(downloadUri, HttpCompletionOption.ResponseHeadersRead))
             {
                 if (!response.IsSuccessStatusCode)
                 {
-                    logger.LogInformation($"The request returned with HTTP status code {response.StatusCode}");
+                    logger.LogInformation("The request returned with HTTP status code {ResponseStatusCode}", response.StatusCode);
                     return false;
                 }
 
@@ -50,14 +33,14 @@ namespace Excursion360.Desktop.Services.Firefox
 
                 do
                 {
-                    var read = await contentStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
+                    var read = await contentStream.ReadAsync(buffer).ConfigureAwait(false);
                     if (read == 0)
                     {
                         isMoreToRead = false;
                     }
                     else
                     {
-                        await fileStream.WriteAsync(buffer, 0, read).ConfigureAwait(false);
+                        await fileStream.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
 
                         totalRead += read;
                         totalReads += 1;
@@ -68,7 +51,7 @@ namespace Excursion360.Desktop.Services.Firefox
                 ArrayPool<byte>.Shared.Return(buffer);
             }
 
-            using Process installerProcess = new Process
+            using var installerProcess = new Process
             {
                 StartInfo = new ProcessStartInfo("cmd.exe")
                 {
@@ -97,7 +80,7 @@ namespace Excursion360.Desktop.Services.Firefox
         {
             logger.LogInformation("Checking for firefox...");
 
-            object path = Registry.GetValue(RegistryFirefoxKey, "", null);
+            object? path = Registry.GetValue(RegistryFirefoxKey, "", null);
 
             if (path != null) { logger.LogInformation("Firefox installed"); }
             return new ValueTask<bool>(path != null);
@@ -106,9 +89,10 @@ namespace Excursion360.Desktop.Services.Firefox
         public ValueTask StartBrowser(Uri uri)
         {
             uri = uri ?? throw new ArgumentNullException(nameof(uri));
-            logger.LogInformation($"Starting firefox on {uri.AbsoluteUri}");
-
-            Process.Start(Registry.GetValue(RegistryFirefoxKey, "", null).ToString(), uri.AbsoluteUri);
+            logger.LogInformation("Starting firefox on {StartUrl}", uri.AbsoluteUri);
+            var firefoxPath = Registry.GetValue(RegistryFirefoxKey, "", null)?.ToString()
+                ?? throw new InvalidDataException($"Can't run firefox, not found registry key value {RegistryFirefoxKey}");
+            Process.Start(firefoxPath, uri.AbsoluteUri);
             return new ValueTask();
         }
     }

@@ -15,7 +15,6 @@ using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using static Nuke.Common.Logger;
 
-[CheckBuildProjectConfigurations]
 [ShutdownDotNetAfterServerBuild]
 class Build : NukeBuild
 {
@@ -41,7 +40,7 @@ class Build : NukeBuild
         .Before(Restore)
         .Executes(() =>
         {
-            EnsureCleanDirectory(OutputDirectory);
+            OutputDirectory.CreateOrCleanDirectory();
         });
 
     Target Restore => _ => _
@@ -77,6 +76,7 @@ class Build : NukeBuild
                 .EnablePublishTrimmed()
                 .SetProperty("DebugType", "None")
                 .SetProperty("DebugSymbols", false)
+                .SetProperty("PublishIISAssets", false)
                 .EnableNoRestore());
 
             var executableFile = System.IO.Directory.GetFiles(OutputDirectory)
