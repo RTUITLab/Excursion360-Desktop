@@ -6,6 +6,7 @@ using System.Reflection;
 using Excursion360.Desktop.Exceptions;
 using MintPlayer.PlatformBrowser;
 using Excursion360.Desktop;
+using Microsoft.AspNetCore.StaticFiles;
 
 Console.BackgroundColor = ConsoleColor.Black;
 Console.ForegroundColor = ConsoleColor.White;
@@ -40,6 +41,9 @@ var fso = new FileServerOptions
             new EmbeddedFileProvider(Assembly.GetExecutingAssembly()))
 };
 fso.DefaultFilesOptions.DefaultFileNames.Add("Resources/NotFound.html");
+var provider = new FileExtensionContentTypeProvider();
+provider.Mappings[".glb"] = "model/gltf-binary";
+fso.StaticFileOptions.ContentTypeProvider = provider;
 fso.StaticFileOptions.OnPrepareResponse = (context) =>
 {
     if (context.File.Name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && context.File.PhysicalPath is not null)
