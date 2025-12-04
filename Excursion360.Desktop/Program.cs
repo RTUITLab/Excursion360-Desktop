@@ -46,6 +46,10 @@ provider.Mappings[".glb"] = "model/gltf-binary";
 fso.StaticFileOptions.ContentTypeProvider = provider;
 fso.StaticFileOptions.OnPrepareResponse = (context) =>
 {
+    // При локальной работе нет необходимости кешировать файлы
+    context.Context.Response.Headers.CacheControl = "no-cache, no-store";
+    context.Context.Response.Headers.Pragma = "no-cache";
+    context.Context.Response.Headers.Expires = "-1";
     if (context.File.Name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && context.File.PhysicalPath is not null)
     {
         var stateImagesMetricsStore = context.Context.RequestServices.GetRequiredService<IStateImagesMetricsStore>();
